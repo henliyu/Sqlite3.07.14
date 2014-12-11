@@ -1997,13 +1997,14 @@ int sqlite3ParseUri(
 
     /* Make sure the SQLITE_OPEN_URI flag is set to indicate to the VFS xOpen 
     ** method that there may be extra parameters following the file-name.  */
-    flags |= SQLITE_OPEN_URI;
+    flags |= SQLITE_OPEN_URI;/*flags与SQLITE_OPEN_URI进行二进制运算值赋值给flags*/
 
     for(iIn=0; iIn<nUri; iIn++) nByte += (zUri[iIn]=='&');
     zFile = sqlite3_malloc(nByte);
     if( !zFile ) return SQLITE_NOMEM;
 
-    /* Discard the scheme and authority segments of the URI. */
+    /* Discard the scheme and authority segments of the URI.
+    */
     if( zUri[5]=='/' && zUri[6]=='/' ){
       iIn = 7;
       while( zUri[iIn] && zUri[iIn]!='/' ) iIn++;
@@ -2019,14 +2020,16 @@ int sqlite3ParseUri(
     }
 
     /* Copy the filename and any query parameters into the zFile buffer. 
+    复制文件名和任何查询参数到缓冲区
     ** Decode %HH escape codes along the way. 
     **
     ** Within this loop, variable eState may be set to 0, 1 or 2, depending
     ** on the parsing context. As follows:
+    在这个循环中，变量eState可以被设置为0，1或2，取决于上下文
     **
-    **   0: Parsing file-name.
-    **   1: Parsing name section of a name=value query parameter.
-    **   2: Parsing value section of a name=value query parameter.
+    **   0: Parsing file-name.0表示解析文件名
+    **   1: Parsing name section of a name=value query parameter.1表示解析名称的名称部分赋值查询参数的值
+    **   2: Parsing value section of a name=value query parameter.2表示解析名称的值赋值为查询参数的值
     */
     eState = 0;
     while( (c = zUri[iIn])!=0 && c!='#' ){
@@ -2040,10 +2043,12 @@ int sqlite3ParseUri(
 
         assert( octet>=0 && octet<256 );
         if( octet==0 ){
-          /* This branch is taken when "%00" appears within the URI. In this
+          /* This branch is taken when "%00" appears within the URI. 当"%00"出现在URL中下分支指令In this
           ** case we ignore all text in the remainder of the path, name or
           ** value currently being parsed. So ignore the current character
-          ** and skip to the next "?", "=" or "&", as appropriate. */
+          ** and skip to the next "?", "=" or "&", as appropriate. 
+		  **在这种情况下，我们忽略了剩余的路径名称或值的所有文本，目前正在分析。
+		  所以不管当前字符跳到下一个“？”，“=”或“&”。*/
           while( (c = zUri[iIn])!=0 && c!='#' 
               && (eState!=0 || c!='?')
               && (eState!=1 || (c!='=' && c!='&'))
@@ -2056,7 +2061,8 @@ int sqlite3ParseUri(
         c = octet;
       }else if( eState==1 && (c=='&' || c=='=') ){
         if( zFile[iOut-1]==0 ){
-          /* An empty option name. Ignore this option altogether. */
+          /* An empty option name. Ignore this option altogether.
+          一个空的选项名可以忽略*/
           while( zUri[iIn] && zUri[iIn]!='#' && zUri[iIn-1]!='&' ) iIn++;
           continue;
         }
@@ -2077,9 +2083,9 @@ int sqlite3ParseUri(
     zFile[iOut++] = '\0';
 
     /* Check if there were any options specified that should be interpreted 
-    ** here. Options that are interpreted here include "vfs" and those that
+    ** here. 检查是否有任何应该在这里解释的指定选项Options that are interpreted here include "vfs" and those that
     ** correspond to flags that may be passed to the sqlite3_open_v2()
-    ** method. */
+    ** method.解释包括“VFS”和那些对应于标记的选项传递给sqlite3_open_v2()的方法 */
     zOpt = &zFile[sqlite3Strlen30(zFile)+1];
     while( zOpt[0] ){
       int nOpt = sqlite3Strlen30(zOpt);
@@ -2180,20 +2186,22 @@ int sqlite3ParseUri(
 
 /*
 ** This routine does the work of opening a database on behalf of
+**这个程序确实代表打开数据库的工作
 ** sqlite3_open() and sqlite3_open16(). The database filename "zFilename"  
+**数据库文件名“zFilename”是UTF-8编码
 ** is UTF-8 encoded.
 */
 static int openDatabase(
-  const char *zFilename, /* Database filename UTF-8 encoded */
-  sqlite3 **ppDb,        /* OUT: Returned database handle */
+  const char *zFilename, /* Database filename UTF-8 encoded 数据库文件名UTF-8编码*/
+  sqlite3 **ppDb,        /* OUT: Returned database handle 返回数据库处理*/
   unsigned int flags,    /* Operational flags */
   const char *zVfs       /* Name of the VFS to use */
 ){
-  sqlite3 *db;                    /* Store allocated handle here */
-  int rc;                         /* Return code */
+  sqlite3 *db;                    /* Store allocated handle here 存储分配处理的值*/
+  int rc;                         /* Return code 返回密码*/
   int isThreadsafe;               /* True for threadsafe connections */
-  char *zOpen = 0;                /* Filename argument to pass to BtreeOpen() */
-  char *zErrMsg = 0;              /* Error message from sqlite3ParseUri() */
+  char *zOpen = 0;                /* Filename argument to pass to BtreeOpen() 文件名参数传递给btreeopen()*/
+  char *zErrMsg = 0;              /* Error message from sqlite3ParseUri()来自sqlite3parseuri()的错误消息 */
 
   *ppDb = 0;
 #ifndef SQLITE_OMIT_AUTOINIT
@@ -2206,7 +2214,8 @@ static int openDatabase(
   ** do not block illegal combinations here, it could trigger
   ** assert() statements in deeper layers.  Sensible combinations
   ** are:
-  **
+  **只允许在标志位正确的组合参数。如果任何无意义的组合用于抛出一个错误。
+  **如果我们不阻止非法的组合，它可以触发在更深的层次assert()声明。正确的组合是：
   **  1:  SQLITE_OPEN_READONLY
   **  2:  SQLITE_OPEN_READWRITE
   **  6:  SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
@@ -2214,9 +2223,9 @@ static int openDatabase(
   assert( SQLITE_OPEN_READONLY  == 0x01 );
   assert( SQLITE_OPEN_READWRITE == 0x02 );
   assert( SQLITE_OPEN_CREATE    == 0x04 );
-  testcase( (1<<(flags&7))==0x02 ); /* READONLY */
-  testcase( (1<<(flags&7))==0x04 ); /* READWRITE */
-  testcase( (1<<(flags&7))==0x40 ); /* READWRITE | CREATE */
+  testcase( (1<<(flags&7))==0x02 ); /* READONLY 只读*/
+  testcase( (1<<(flags&7))==0x04 ); /* READWRITE 可读写*/
+  testcase( (1<<(flags&7))==0x40 ); /* READWRITE | CREATE可读写和创建 */
   if( ((1<<(flags&7)) & 0x46)==0 ) return SQLITE_MISUSE_BKPT;
 
   if( sqlite3GlobalConfig.bCoreMutex==0 ){
@@ -2234,7 +2243,7 @@ static int openDatabase(
     flags |= SQLITE_OPEN_SHAREDCACHE;
   }
 
-  /* Remove harmful bits from the flags parameter
+  /* Remove harmful bits from the flags parameter从参数中去除错误的位
   **
   ** The SQLITE_OPEN_NOMUTEX and SQLITE_OPEN_FULLMUTEX flags were
   ** dealt with in the previous code block.  Besides these, the only
@@ -2242,6 +2251,11 @@ static int openDatabase(
   ** SQLITE_OPEN_READWRITE, SQLITE_OPEN_CREATE, SQLITE_OPEN_SHAREDCACHE,
   ** SQLITE_OPEN_PRIVATECACHE, and some reserved bits.  Silently mask
   ** off all other flags.
+  **flags在前面的代码块处理的sqlite_open_nomutex和sqlite_open_fullmutex。
+  **除此之外，唯一有效的输入的flags
+  **sqlite3_open_v2()是sqlite_open_readonly，sqlite_open_readwrite，
+  **sqlite_open_create，sqlite_open_sharedcache，sqlite_open_privatecache，和一些保留位。
+  **自己标记所有的flags
   */
   flags &=  ~( SQLITE_OPEN_DELETEONCLOSE |
                SQLITE_OPEN_EXCLUSIVE |
@@ -2257,7 +2271,7 @@ static int openDatabase(
                SQLITE_OPEN_WAL
              );
 
-  /* Allocate the sqlite data structure */
+  /* Allocate the sqlite data structure 配置SQLite数据结构*/
   db = sqlite3MallocZero( sizeof(sqlite3) );
   if( db==0 ) goto opendb_out;
   if( isThreadsafe ){
@@ -2301,6 +2315,8 @@ static int openDatabase(
   /* Add the default collation sequence BINARY. BINARY works for both UTF-8
   ** and UTF-16, so add a version for each to avoid any unnecessary
   ** conversions. The only error that can occur here is a malloc() failure.
+  **默认添加的排序规则序列的二进制。为UTF-8和UTF-16二进制的使用，所以添加一个版本为每个要避免任何不必要的转换。
+  **唯一的错误，这是一个malloc()出现故障
   */
   createCollation(db, "BINARY", SQLITE_UTF8, 0, binCollFunc, 0);
   createCollation(db, "BINARY", SQLITE_UTF16BE, 0, binCollFunc, 0);
@@ -2312,10 +2328,10 @@ static int openDatabase(
   db->pDfltColl = sqlite3FindCollSeq(db, SQLITE_UTF8, "BINARY", 0);
   assert( db->pDfltColl!=0 );
 
-  /* Also add a UTF-8 case-insensitive collation sequence. */
+  /* Also add a UTF-8 case-insensitive collation sequence. 添加一个UTF-8编码的不区分大小写的排序序列*/
   createCollation(db, "NOCASE", SQLITE_UTF8, 0, nocaseCollatingFunc, 0);
 
-  /* Parse the filename/URI argument. */
+  /* Parse the filename/URI argument. 解析文件名/ URI参数*/
   db->openFlags = flags;
   rc = sqlite3ParseUri(zVfs, zFilename, &flags, &db->pVfs, &zOpen, &zErrMsg);
   if( rc!=SQLITE_OK ){
@@ -2325,7 +2341,7 @@ static int openDatabase(
     goto opendb_out;
   }
 
-  /* Open the backend database driver */
+  /* Open the backend database driver打开后台数据库驱动程序 */
   rc = sqlite3BtreeOpen(db->pVfs, zOpen, db, &db->aDb[0].pBt, 0,
                         flags | SQLITE_OPEN_MAIN_DB);
   if( rc!=SQLITE_OK ){
@@ -2340,7 +2356,9 @@ static int openDatabase(
 
 
   /* The default safety_level for the main database is 'full'; for the temp
-  ** database it is 'NONE'. This matches the pager layer defaults.  
+  ** database it is 'NONE'. This matches the pager layer defaults. 
+  **对主数据库的默认safety_level是“full”；对于临时数据库是‘NONE’
+  **
   */
   db->aDb[0].zName = "main";
   db->aDb[0].safety_level = 3;
@@ -2355,12 +2373,14 @@ static int openDatabase(
   /* Register all built-in functions, but do not attempt to read the
   ** database schema yet. This is delayed until the first time the database
   ** is accessed.
+  **注册所有的内置功能，但不要试图读取数据库架构。这是延迟到第一次访问数据库。
   */
   sqlite3Error(db, SQLITE_OK, 0);
   sqlite3RegisterBuiltinFunctions(db);
 
   /* Load automatic extensions - extensions that have been registered
   ** using the sqlite3_automatic_extension() API.
+  **负载自动扩展-已使用sqlite3_automatic_extension() API注册扩展。
   */
   rc = sqlite3_errcode(db);
   if( rc==SQLITE_OK ){
@@ -2408,6 +2428,9 @@ static int openDatabase(
   /* -DSQLITE_DEFAULT_LOCKING_MODE=1 makes EXCLUSIVE the default locking
   ** mode.  -DSQLITE_DEFAULT_LOCKING_MODE=0 make NORMAL the default locking
   ** mode.  Doing nothing at all also makes NORMAL the default.
+  ** -DSQLITE_DEFAULT_LOCKING_MODE=1 使EXCLUSIVE默认锁定模式
+  **-DSQLITE_DEFAULT_LOCKING_MODE=0 使 NORMAL默认锁定模式
+  **什么都不做也使NORMAL默认
   */
 #ifdef SQLITE_DEFAULT_LOCKING_MODE
   db->dfltLockMode = SQLITE_DEFAULT_LOCKING_MODE;
@@ -2415,7 +2438,7 @@ static int openDatabase(
                           SQLITE_DEFAULT_LOCKING_MODE);
 #endif
 
-  /* Enable the lookaside-malloc subsystem */
+  /* Enable the lookaside-malloc subsystem 使用lookaside-malloc子系统*/
   setupLookaside(db, 0, sqlite3GlobalConfig.szLookaside,
                         sqlite3GlobalConfig.nLookaside);
 
@@ -2440,7 +2463,7 @@ opendb_out:
 }
 
 /*
-** Open a new database handle.
+** Open a new database handle.打开一个新的数据库处理
 */
 int sqlite3_open(
   const char *zFilename, 
@@ -2450,8 +2473,8 @@ int sqlite3_open(
                       SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 }
 int sqlite3_open_v2(
-  const char *filename,   /* Database filename (UTF-8) */
-  sqlite3 **ppDb,         /* OUT: SQLite db handle */
+  const char *filename,   /* Database filename (UTF-8) 数据库文件名UTF-8的*/
+  sqlite3 **ppDb,         /* OUT: SQLite db handle 数据库处理*/
   int flags,              /* Flags */
   const char *zVfs        /* Name of VFS module to use */
 ){
@@ -2460,13 +2483,14 @@ int sqlite3_open_v2(
 
 #ifndef SQLITE_OMIT_UTF16
 /*
-** Open a new database handle.
+** Open a new database handle.打开一个新的数据库处理
 */
 int sqlite3_open16(
   const void *zFilename, 
   sqlite3 **ppDb
 ){
-  char const *zFilename8;   /* zFilename encoded in UTF-8 instead of UTF-16 */
+  char const *zFilename8;   /* zFilename encoded in UTF-8 instead of UTF-16 
+                             **UTF-8替代UTF-16编码 */
   sqlite3_value *pVal;
   int rc;
 
@@ -2498,6 +2522,7 @@ int sqlite3_open16(
 
 /*
 ** Register a new collation sequence with the database handle db.
+**注册一个新的数据库处理数据库的排序序列
 */
 int sqlite3_create_collation(
   sqlite3* db, 
@@ -2517,6 +2542,7 @@ int sqlite3_create_collation(
 
 /*
 ** Register a new collation sequence with the database handle db.
+**注册一个新的数据库处理数据库的排序序列
 */
 int sqlite3_create_collation_v2(
   sqlite3* db, 
@@ -2538,6 +2564,7 @@ int sqlite3_create_collation_v2(
 #ifndef SQLITE_OMIT_UTF16
 /*
 ** Register a new collation sequence with the database handle db.
+**注册一个新的数据库处理数据库的排序序列
 */
 int sqlite3_create_collation16(
   sqlite3* db, 
@@ -2564,6 +2591,8 @@ int sqlite3_create_collation16(
 /*
 ** Register a collation sequence factory callback with the database handle
 ** db. Replace any previously installed collation sequence factory.
+**注册一个数据库处理数据库的回调排列序列，
+**取代以前安装的。
 */
 int sqlite3_collation_needed(
   sqlite3 *db, 
@@ -2582,6 +2611,8 @@ int sqlite3_collation_needed(
 /*
 ** Register a collation sequence factory callback with the database handle
 ** db. Replace any previously installed collation sequence factory.
+**注册一个数据库处理数据库的回调排列序列，
+**取代以前安装的。
 */
 int sqlite3_collation_needed16(
   sqlite3 *db, 
@@ -2601,6 +2632,8 @@ int sqlite3_collation_needed16(
 /*
 ** This function is now an anachronism. It used to be used to recover from a
 ** malloc() failure, but SQLite now does this automatically.
+**此功能是现在已经过时了。它曾经是用来从一个malloc()故障中恢复，
+**但现在SQLite自动恢复。
 */
 int sqlite3_global_recover(void){
   return SQLITE_OK;
@@ -2612,7 +2645,8 @@ int sqlite3_global_recover(void){
 ** mode.  Return TRUE if it is and FALSE if not.  Autocommit mode is on
 ** by default.  Autocommit is disabled by a BEGIN statement and reenabled
 ** by the next COMMIT or ROLLBACK.
-**
+**测试看看是否是数据库连接在自动提交模式。如果是返回FALSE如果不是返回true。
+**自动提交模式是默认的。自动提交的声明和重新启动开始的下一个COMMIT或ROLLBACK。
 ******* THIS IS AN EXPERIMENTAL API AND IS SUBJECT TO CHANGE ******
 */
 int sqlite3_get_autocommit(sqlite3 *db){
@@ -2623,12 +2657,15 @@ int sqlite3_get_autocommit(sqlite3 *db){
 ** The following routines are subtitutes for constants SQLITE_CORRUPT,
 ** SQLITE_MISUSE, SQLITE_CANTOPEN, SQLITE_IOERR and possibly other error
 ** constants.  They server two purposes:
+**下面的程序有常数SQLITE_CORRUPT,SQLITE_MISUSE, SQLITE_CANTOPEN, SQLITE_IOERR
+** 和其他的误差常数，他们的服务器有两个目的
 **
 **   1.  Serve as a convenient place to set a breakpoint in a debugger
 **       to detect when version error conditions occurs.
-**
+**作为一个在调试器检测到版本错误条件时方便设置断点的地方
 **   2.  Invoke sqlite3_log() to provide the source code location where
 **       a low-level error is first detected.
+**调用sqlite3_log()提供源代码的位置的第一个发现的低级错误。
 */
 int sqlite3CorruptError(int lineno){
   testcase( sqlite3GlobalConfig.xLog!=0 );
@@ -2657,9 +2694,10 @@ int sqlite3CantopenError(int lineno){
 /*
 ** This is a convenience routine that makes sure that all thread-specific
 ** data for this thread has been deallocated.
-**
+**这是一个简便的程序，确保所有线程特定的数据为该线程已释放。
 ** SQLite no longer uses thread-specific data so this routine is now a
 ** no-op.  It is retained for historical compatibility.
+**SQLite不再使用线程特定的数据，这个程序是一个空操作。它是保留历史的兼容性。
 */
 void sqlite3_thread_cleanup(void){
 }
@@ -2667,19 +2705,20 @@ void sqlite3_thread_cleanup(void){
 
 /*
 ** Return meta information about a specific column of a database table.
+**返回有关特定列的元数据信息的数据库表
 ** See comment in sqlite3.h (sqlite.h.in) for details.
 */
 #ifdef SQLITE_ENABLE_COLUMN_METADATA
 int sqlite3_table_column_metadata(
-  sqlite3 *db,                /* Connection handle */
-  const char *zDbName,        /* Database name or NULL */
-  const char *zTableName,     /* Table name */
-  const char *zColumnName,    /* Column name */
-  char const **pzDataType,    /* OUTPUT: Declared data type */
-  char const **pzCollSeq,     /* OUTPUT: Collation sequence name */
-  int *pNotNull,              /* OUTPUT: True if NOT NULL constraint exists */
-  int *pPrimaryKey,           /* OUTPUT: True if column part of PK */
-  int *pAutoinc               /* OUTPUT: True if column is auto-increment */
+  sqlite3 *db,                /* Connection handle 连接处理*/
+  const char *zDbName,        /* Database name or NULL 数据库名称或者为空*/
+  const char *zTableName,     /* Table name表名 */
+  const char *zColumnName,    /* Column name列名 */
+  char const **pzDataType,    /* OUTPUT: Declared data type声明数据类型 */
+  char const **pzCollSeq,     /* OUTPUT: Collation sequence name排序序列名称 */
+  int *pNotNull,              /* OUTPUT: True if NOT NULL constraint exists 非空约束的存在*/
+  int *pPrimaryKey,           /* OUTPUT: True if column part of PK 主键部分*/
+  int *pAutoinc               /* OUTPUT: True if column is auto-increment列的自动增量 */
 ){
   int rc;
   char *zErrMsg = 0;
@@ -2693,7 +2732,7 @@ int sqlite3_table_column_metadata(
   int primarykey = 0;
   int autoinc = 0;
 
-  /* Ensure the database schema has been loaded */
+  /* Ensure the database schema has been loaded 确保数据库架构已加载*/
   sqlite3_mutex_enter(db->mutex);
   sqlite3BtreeEnterAll(db);
   rc = sqlite3Init(db, &zErrMsg);
@@ -2701,14 +2740,14 @@ int sqlite3_table_column_metadata(
     goto error_out;
   }
 
-  /* Locate the table in question */
+  /* Locate the table in question找表的问题 */
   pTab = sqlite3FindTable(db, zTableName, zDbName);
   if( !pTab || pTab->pSelect ){
     pTab = 0;
     goto error_out;
   }
 
-  /* Find the column for which info is requested */
+  /* Find the column for which info is requested找到的列信息的请求 */
   if( sqlite3IsRowid(zColumnName) ){
     iCol = pTab->iPKey;
     if( iCol>=0 ){
@@ -2730,12 +2769,14 @@ int sqlite3_table_column_metadata(
   /* The following block stores the meta information that will be returned
   ** to the caller in local variables zDataType, zCollSeq, notnull, primarykey
   ** and autoinc. At this point there are two possibilities:
-  ** 
+  ** 下面的块存储元信息，将返回局部变量zdatatype，zcollseq，notnull，PrimaryKey和autoinc。
+  **在这一点上有两种可能性：
   **     1. The specified column name was rowid", "oid" or "_rowid_" 
   **        and there is no explicitly declared IPK column. 
-  **
+  **指定的列名称是rowid”，“old”或“_rowid_”并没有明确宣布IPK列。
   **     2. The table is not a view and the column name identified an 
   **        explicitly declared column. Copy meta information from *pCol.
+  **这个表不是视图并且列名没有显示列，复制元的信息从指针
   */ 
   if( pCol ){
     zDataType = pCol->zType;
@@ -2757,6 +2798,7 @@ error_out:
   /* Whether the function call succeeded or failed, set the output parameters
   ** to whatever their local counterparts contain. If an error did occur,
   ** this has the effect of zeroing all output parameters.
+  **函数调用是否成功或失败，将任何本地包含输出参数。如果发生一个错误，输出影响一切归零的参数。
   */
   if( pzDataType ) *pzDataType = zDataType;
   if( pzCollSeq ) *pzCollSeq = zCollSeq;
@@ -2789,13 +2831,14 @@ int sqlite3_sleep(int ms){
 
   /* This function works in milliseconds, but the underlying OsSleep() 
   ** API uses microseconds. Hence the 1000's.
+  **此功能在毫秒，但潜在的ossleep() API使用微秒
   */
   rc = (sqlite3OsSleep(pVfs, 1000*ms)/1000);
   return rc;
 }
 
 /*
-** Enable or disable the extended result codes.
+** Enable or disable the extended result codes.启用或禁用扩展的结果代码
 */
 int sqlite3_extended_result_codes(sqlite3 *db, int onoff){
   sqlite3_mutex_enter(db->mutex);
@@ -2805,7 +2848,7 @@ int sqlite3_extended_result_codes(sqlite3 *db, int onoff){
 }
 
 /*
-** Invoke the xFileControl method on a particular database.
+** Invoke the xFileControl method on a particular database.在一个特定的数据库中调用xfilecontrol方法
 */
 int sqlite3_file_control(sqlite3 *db, const char *zDbName, int op, void *pArg){
   int rc = SQLITE_ERROR;
@@ -2836,7 +2879,7 @@ int sqlite3_file_control(sqlite3 *db, const char *zDbName, int op, void *pArg){
 }
 
 /*
-** Interface to the testing logic.
+** Interface to the testing logic.接口逻辑测试
 */
 int sqlite3_test_control(int op, ...){
   int rc = 0;
@@ -2846,7 +2889,7 @@ int sqlite3_test_control(int op, ...){
   switch( op ){
 
     /*
-    ** Save the current state of the PRNG.
+    ** Save the current state of the PRNG.保存的PRNG的当前状态
     */
     case SQLITE_TESTCTRL_PRNG_SAVE: {
       sqlite3PrngSaveState();
@@ -2857,6 +2900,7 @@ int sqlite3_test_control(int op, ...){
     ** Restore the state of the PRNG to the last state saved using
     ** PRNG_SAVE.  If PRNG_SAVE has never before been called, then
     ** this verb acts like PRNG_RESET.
+	**恢复状态的PRNG最后保存的状态使用prng_save。如果prng_save从未被用，那么就用prng_reset。
     */
     case SQLITE_TESTCTRL_PRNG_RESTORE: {
       sqlite3PrngRestoreState();
@@ -2867,6 +2911,7 @@ int sqlite3_test_control(int op, ...){
     ** Reset the PRNG back to its uninitialized state.  The next call
     ** to sqlite3_randomness() will reseed the PRNG using a single call
     ** to the xRandomness method of the default VFS.
+	**重置PRNG回到未初始化状态。对sqlite3_randomness()下个响应复位PRNG，使用单一调用默认的VFS的xrandomness方法。
     */
     case SQLITE_TESTCTRL_PRNG_RESET: {
       sqlite3PrngResetState();
@@ -2883,7 +2928,7 @@ int sqlite3_test_control(int op, ...){
     */
     case SQLITE_TESTCTRL_BITVEC_TEST: {
       int sz = va_arg(ap, int);
-      int *aProg = va_arg(ap, int*);
+      int *aProg = va_arg(ap, int*);/*定义sz，*aProg并赋值，再调用sqlite3BitvecBuiltinTest(sz, aProg)把值赋值给rc*/
       rc = sqlite3BitvecBuiltinTest(sz, aProg);
       break;
     }
@@ -2897,8 +2942,8 @@ int sqlite3_test_control(int op, ...){
     case SQLITE_TESTCTRL_BENIGN_MALLOC_HOOKS: {
       typedef void (*void_function)(void);
       void_function xBenignBegin;
-      void_function xBenignEnd;
-      xBenignBegin = va_arg(ap, void_function);
+      void_function xBenignBegin;
+      xBenignBegin = va_arg(ap, void_function);/*声明函数xBenignBegin、xBenignBegin，赋值给他们，在调用函数sqlite3BenignMallocHooks(xBenignBegin, xBenignEnd)*/
       xBenignEnd = va_arg(ap, void_function);
       sqlite3BenignMallocHooks(xBenignBegin, xBenignEnd);
       break;
@@ -2917,12 +2962,12 @@ int sqlite3_test_control(int op, ...){
     ** dileterious behavior.
     */
     case SQLITE_TESTCTRL_PENDING_BYTE: {
-      rc = PENDING_BYTE;
+      rc = PENDING_BYTE;/*rc赋值为PENDING_BYTE*/
 #ifndef SQLITE_OMIT_WSD
       {
         unsigned int newVal = va_arg(ap, unsigned int);
         if( newVal ) sqlite3PendingByte = newVal;
-      }
+      }/*函数SQLITE_OMIT_WSD，定义newVal = va_arg(ap, unsigned int)，如果newVal真，sqlite3PendingByte = newVal*/
 #endif
       break;
     }
@@ -2940,7 +2985,7 @@ int sqlite3_test_control(int op, ...){
     */
     case SQLITE_TESTCTRL_ASSERT: {
       volatile int x = 0;
-      assert( (x = va_arg(ap,int))!=0 );
+      assert( (x = va_arg(ap,int))!=0 );/*选择执行这个函数定义x为0，递归assert(x)其中x为(x = va_arg(ap,int))!=0，rc赋值为x*/
       rc = x;
       break;
     }
@@ -2974,7 +3019,7 @@ int sqlite3_test_control(int op, ...){
     **    }
     */
     case SQLITE_TESTCTRL_ALWAYS: {
-      int x = va_arg(ap,int);
+      int x = va_arg(ap,int);/*选择执行这个函数x赋值为va_arg(ap,int)，rc赋值ALWAYS(x)递归*/
       rc = ALWAYS(x);
       break;
     }
@@ -2983,6 +3028,7 @@ int sqlite3_test_control(int op, ...){
     **
     ** Set the nReserve size to N for the main database on the database
     ** connection db.
+	**设置nreserve大小N对数据库连接数据库的主数据库。
     */
     case SQLITE_TESTCTRL_RESERVE: {
       sqlite3 *db = va_arg(ap, sqlite3*);
@@ -3001,6 +3047,8 @@ int sqlite3_test_control(int op, ...){
     ** SQL Logic Test or SLT test module) can run the same SQL multiple times
     ** with various optimizations disabled to verify that the same answer
     ** is obtained in every case.
+	**启用或禁用用于测试目的的各种优化。参数N位掩码的优化被禁用。对于正常运行，应为0。
+	**这个想法是，一个测试程序（如SQL逻辑测试或系统测试模块）可以运行相同的SQL多次与各种优化禁用验证相同的答案是在任何情况下获得。
     */
     case SQLITE_TESTCTRL_OPTIMIZATIONS: {
       sqlite3 *db = va_arg(ap, sqlite3*);
@@ -3014,10 +3062,14 @@ int sqlite3_test_control(int op, ...){
     **
     ** If zWord is a keyword recognized by the parser, then return the
     ** number of keywords.  Or if zWord is not a keyword, return 0.
+	**如果zword是关键字被解析器的认可，然后返回关键字。
+	**如果zword不是关键字，返回0。
     ** 
     ** This test feature is only available in the amalgamation since
     ** the SQLITE_N_KEYWORD macro is not defined in this file if SQLite
     ** is built using separate source files.
+	**这个测试功能是合并唯一可用的
+	**如果SQLite是使用单独的源文件的建立,sqlite_n_keyword宏在这个文件中没有被定义
     */
     case SQLITE_TESTCTRL_ISKEYWORD: {
       const char *zWord = va_arg(ap, const char*);
@@ -3030,7 +3082,9 @@ int sqlite3_test_control(int op, ...){
     /* sqlite3_test_control(SQLITE_TESTCTRL_SCRATCHMALLOC, sz, &pNew, pFree);
     **
     ** Pass pFree into sqlite3ScratchFree(). 
-    ** If sz>0 then allocate a scratch buffer into pNew.  
+	**通过pfree进入sqlite3scratchfree()
+    ** If sz>0 then allocate a scratch buffer into pNew.
+	**如果sz大于0，分配一个缓冲区进入 pNEW
     */
     case SQLITE_TESTCTRL_SCRATCHMALLOC: {
       void *pFree, **ppNew;
@@ -3048,6 +3102,8 @@ int sqlite3_test_control(int op, ...){
     ** If parameter onoff is non-zero, configure the wrappers so that all
     ** subsequent calls to localtime() and variants fail. If onoff is zero,
     ** undo this setting.
+	**如果参数开关是非零的，使所有配置的包装随后调用localtime()和变型失败。
+	**如果开关是零，撤消此设置。
     */
     case SQLITE_TESTCTRL_LOCALTIME_FAULT: {
       sqlite3GlobalConfig.bLocaltimeFault = va_arg(ap, int);
@@ -3061,6 +3117,8 @@ int sqlite3_test_control(int op, ...){
     ** If compiled with SQLITE_ENABLE_TREE_EXPLAIN, each sqlite3_stmt holds
     ** a string that describes the optimized parse tree.  This test-control
     ** returns a pointer to that string.
+	**果编译sqlite_enable_tree_explain，每个sqlite3_stmt拥有一个描述了优化的解析树的字符串，
+	**本试验控制返回一个字符串指针。
     */
     case SQLITE_TESTCTRL_EXPLAIN_STMT: {
       sqlite3_stmt *pStmt = va_arg(ap, sqlite3_stmt*);
@@ -3079,13 +3137,16 @@ int sqlite3_test_control(int op, ...){
 /*
 ** This is a utility routine, useful to VFS implementations, that checks
 ** to see if a database file was a URI that contained a specific query 
-** parameter, and if so obtains the value of the query parameter.
+** parameter, and if so obtains the value of the query parameter.】
+**检查数据库文件是不是一个包含查询参数的URL如果是返回查询参数值
 **
 ** The zFilename argument is the filename pointer passed into the xOpen()
 ** method of a VFS implementation.  The zParam argument is the name of the
 ** query parameter we seek.  This routine returns the value of the zParam
 ** parameter if it exists.  If the parameter does not exist, this routine
 ** returns a NULL pointer.
+**该zFilename参数是传入的VFS实现XOPEN（）方法的文件名的指针。该zParam说法是我们所搜索的查询参数的名称。
+**如果它存在的zParam参数的值就返回。如果该参数不存在，返回NULL指针。
 */
 const char *sqlite3_uri_parameter(const char *zFilename, const char *zParam){
   if( zFilename==0 ) return 0;
@@ -3101,6 +3162,7 @@ const char *sqlite3_uri_parameter(const char *zFilename, const char *zParam){
 
 /*
 ** Return a boolean value for a query parameter.
+**返回一个布尔值的查询参数
 */
 int sqlite3_uri_boolean(const char *zFilename, const char *zParam, int bDflt){
   const char *z = sqlite3_uri_parameter(zFilename, zParam);
@@ -3110,11 +3172,12 @@ int sqlite3_uri_boolean(const char *zFilename, const char *zParam, int bDflt){
 
 /*
 ** Return a 64-bit integer value for a query parameter.
+**返回一个64位整数值的查询参数
 */
 sqlite3_int64 sqlite3_uri_int64(
-  const char *zFilename,    /* Filename as passed to xOpen */
-  const char *zParam,       /* URI parameter sought */
-  sqlite3_int64 bDflt       /* return if parameter is missing */
+  const char *zFilename,    /* Filename as passed to xOpen 文件名传递给xOpen*/
+  const char *zParam,       /* URI parameter sought寻找URL参数 */
+  sqlite3_int64 bDflt       /* return if parameter is missing 如果参数丢失返回*/
 ){
   const char *z = sqlite3_uri_parameter(zFilename, zParam);
   sqlite3_int64 v;
@@ -3126,6 +3189,7 @@ sqlite3_int64 sqlite3_uri_int64(
 
 /*
 ** Return the Btree pointer identified by zDbName.  Return NULL if not found.
+**返回确定zDbName B树指针，如果不存在返回空
 */
 Btree *sqlite3DbNameToBtree(sqlite3 *db, const char *zDbName){
   int i;
@@ -3142,6 +3206,7 @@ Btree *sqlite3DbNameToBtree(sqlite3 *db, const char *zDbName){
 /*
 ** Return the filename of the database associated with a database
 ** connection.
+**返回与数据库连接相关联的数据库中的文件名
 */
 const char *sqlite3_db_filename(sqlite3 *db, const char *zDbName){
   Btree *pBt = sqlite3DbNameToBtree(db, zDbName);
@@ -3151,6 +3216,7 @@ const char *sqlite3_db_filename(sqlite3 *db, const char *zDbName){
 /*
 ** Return 1 if database is read-only or 0 if read/write.  Return -1 if
 ** no such database exists.
+**返回1如果数据库是只读的，返回0可写可读，返回-1数据库不存在
 */
 int sqlite3_db_readonly(sqlite3 *db, const char *zDbName){
   Btree *pBt = sqlite3DbNameToBtree(db, zDbName);

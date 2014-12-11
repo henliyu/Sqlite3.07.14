@@ -2636,7 +2636,7 @@ int sqlite3_collation_needed16(
 **但现在SQLite自动恢复。
 */
 int sqlite3_global_recover(void){
-  return SQLITE_OK;
+  return SQLITE_OK;/*恢复数据库*/
 }
 #endif
 
